@@ -3,13 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Truss's documentation!
+Welcome to Truss's documentation
 =================================
+
+Truss is a 2D truss calculation framework. It is fully scriptable and dedicated to teaching activities.
+
+
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
+   
+   tutorial
 
 
 

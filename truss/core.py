@@ -132,10 +132,10 @@ class Model(object):
     if field != None:
       if field == "stress": 
         values = np.array([b.stress for b in bars])
-        cbar_label = "Normal stress, $\sigma$"
+        cbar_label = "Normal stress, $\sigma$ [Pa]"
       if field == "tension": 
         values = np.array([b.tension for b in bars])
-        cbar_label = "Tension, $N$"
+        cbar_label = "Tension, $N$ [N]"
       colors = cm.jet(values)
       vmin = min(0., values.min())
       vmax = max(0., values.max())
@@ -170,7 +170,7 @@ class Model(object):
   mass = property(get_mass)  
       
 class Node(object):
-  def __init__(self, coords = np.array([0., 0.]), label = None, bock_side = 1):
+  def __init__(self, coords = np.array([0., 0.]), label = None, block_side = 1):
     coords = np.array(coords).astype(np.float64)[0:2]
     self.coords = np.array(coords)
     self.displacement = np.zeros(2)

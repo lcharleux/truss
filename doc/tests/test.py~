@@ -6,7 +6,7 @@ from matplotlib import patches
 
 modulus = 210.e3     #Pa
 rho = 2700.           #kg/m**3
-surface = .0001       #m**2
+surface = .001       #m**2
 yield_stress = 400 #Pa
 from scipy import optimize
 
