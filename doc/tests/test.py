@@ -10,7 +10,7 @@ surface = .001       #m**2
 yield_stress = 400 #Pa
 from scipy import optimize
 
-m = treillis.core.Model()
+m = truss.core.Model()
 A = m.add_node((0.,0.), label = "A")
 B = m.add_node((0.,1.), label = "B")
 C = m.add_node((1.,0.), label = "C")
@@ -47,17 +47,7 @@ FG = m.add_bar(F, G, modulus = modulus, density = rho, section = surface)
 GH = m.add_bar(G, H, modulus = modulus, density = rho, section = surface)
 
 m.solve()
-"""
-bars = m.bars
-def func(X):
-  for i in xrange(len(bars)): bars[i].section = X[i]
-  m.solve()
-  e = (np.array([b.stress - yield_stress for b in bars])**2).sum()  
-  return e
- 
-X0 = np.array([b.section for b in bars])
-sol = optimize.minimize(func, X0)    
-"""    
+
 
   
 
@@ -67,10 +57,11 @@ plt.clf()
 ax = fig.add_subplot(1,1,1)
 ax.set_aspect("equal")
 #ax.axis("off")
-m.draw(ax, deformed = True, field = "stress", label = True, force_scale = 1.e-6)
+m.draw(ax, deformed = True, field = "stress", label = True, force_scale = 1.e-6, displacement = True)
 plt.xlim(xlim)
 plt.ylim(ylim)
 plt.grid()  
 
 
 plt.show()
+

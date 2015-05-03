@@ -5,21 +5,41 @@ from matplotlib import patches, cm, pyplot
 
 class Model(object):
   """
-  Problème de treillis
+  Truss model
   """
   def __init__(self):
     self.nodes = []
     self.bars = []
-    #self.blocked_dof = []
-    #self.forces = []
-  
+      
   def add_node(self, node, *args, **kwargs):
+    """
+    Adds a node to the model. If ``node`` is an instance of the ``truss.core.node``, it is added. If ``node`` an length 2 array containing, a node instance is created and ``node`` it is used as coordinates and other arguments can be provided as well.
+    
+    :param node: node label or node.
+    :type node:  array or ``truss.core.node`` instance.
+    
+    >>> m = truss.core.Model()
+    >>> A = m.add_node((1., 3.), label = "A")
+    <Node A: x = 1.0, y = 3.0>
+    >>> B = truss.core.Node((4., 5.), label = "B")
+    >>> m.add_node(B)
+    <Node B: x = 4.0, y = 5.0>
+    """
     if isinstance(node, Node) == False:
       node = Node(node, *args, **kwargs)
     self.nodes.append(node)  
     return node
   
   def add_bar(self,*args , **kwargs):
+    """
+    Add a bar to the model.
+    
+    >>> from truss.core import Node, Bar, Model
+    >>> m = Model()
+    >>> B = m.add_node((0., 1.), label = "B")
+    >>> A = m.add_node((0., 0.), label = "A")
+    >>> b = Bar(A, B)
+    """
     bar = Bar(*args , **kwargs)
     self.bars.append(bar)
     return bar
@@ -27,7 +47,10 @@ class Model(object):
   def __repr__(self):
     return "<Model: {0} nodes, {1} bars>".format(len(self.nodes), len(self.bars))
     
-  def get_stiffness_matrix(self):
+  def stiffness_matrix(self):
+    """
+    Returns the full assembled stiffness matrix of the model.
+    """
     nodes = np.array(self.nodes)
     bars = self.bars
     nn = len(nodes)
@@ -37,7 +60,7 @@ class Model(object):
       conn = b.conn
       i0 = np.where(nodes == conn[0])[0][0]
       i1 = np.where(nodes == conn[1])[0][0]
-      Kb = b.stiffness_matrix
+      Kb = b.stiffness_matrix()
       Kb_bar = Kb[0:2,0:2]
       K[2*i0:2*i0 +2,2*i0:2*i0 +2] += Kb_bar
       K[2*i1:2*i1 +2,2*i1:2*i1 +2] += Kb_bar
@@ -45,29 +68,42 @@ class Model(object):
       K[2*i1:2*i1 +2,2*i0:2*i0 +2] -= Kb_bar
     return K
     
-  stiffness_matrix = property(get_stiffness_matrix)   
   
   
   
   def add_force(self, node, magnitude):
+    """
+    Adds an external force on an existing node.
+    
+    :param node: node on which the force is added.
+    :type node: ``truss.core.Node`` instance.
+    :param magnitude: force magnitude on both directions
+    :type magnitude: length 2 array.
+    """
     magnitude = np.array(magnitude).astype(np.float64)[0:2]
     self.forces.append( (node, magnitude) )
   
-  def get_force_vector(self):
+  def force_vector(self):
+    """
+    Returns the full force vector applied on the system.
+    """
     nodes = self.nodes
     force_vector = np.array([n.force for n in nodes]).flatten()
     return force_vector
-  force_vector = property(get_force_vector)
+  
   
   def solve(self):
-    adof = self.active_dof
+    """
+    Solves the system.
+    """
+    adof = self.active_dof()
     nodes= self.nodes
     nn = len(nodes)
     u = np.zeros(2 * nn)
-    K = self.stiffness_matrix
+    K = self.stiffness_matrix()
     Adof1, Adof0 = np.meshgrid(adof, adof)
     Kr = K[(Adof0, Adof1)]
-    f = self.force_vector
+    f = self.force_vector()
     fr = f[adof]
     u[adof] = np.linalg.solve(Kr,fr)
     nodes = np.array(self.nodes)
@@ -84,20 +120,15 @@ class Model(object):
       n0 = bar.conn[0]
       n1 = bar.conn[1]
       bar.elongation = (n1.displacement - n0.displacement).dot(bar.direction())  
-      bar.tension = bar.elongation * bar.stiffness
+      bar.tension = bar.elongation * bar.stiffness()
       bar.strain = bar.elongation / bar.length()
       bar.stress = bar.tension / bar.section 
    
-  def get_blocked_dof(self):
-    bdof = []
-    nodes = self.nodes
-    for node in nodes:
-      if node.block[0]: bdof.append((node, 0))
-      if node.block[1]: bdof.append((node, 1))   
-    return bdof
-  blocked_dof = property(get_blocked_dof)
   
-  def get_active_dof(self):
+  def active_dof(self):
+    """
+    Returns the indices of the active (i. e. not blocked) degrees of freedom.
+    """
     nodes = self.nodes
     nn = len(nodes)
     a = np.ones(2 * nn)
@@ -106,9 +137,12 @@ class Model(object):
       if nodes[i].block[1]: a[2 * i + 1] = 0  
     a = np.where(a == 1)[0]
     return a
-  active_dof = property(get_active_dof)    
+  
   
   def bbox(self, deformed = True, factor = .2):
+    """
+    Returns the bounding box of the truss.
+    """
     xlim = np.zeros(2)
     ylim = np.zeros(2)
     for n in self.nodes:
@@ -126,6 +160,27 @@ class Model(object):
     return xlim, ylim
   
   def draw(self, ax, deformed = True, field = "stress", label = True, forces = True, displacements = False, force_scale = 1., displacement_scale = 1.):
+    """
+    Draws the truss in ``matplotlib`` axes.
+    
+    :param ax: matplotlib axes.
+    :type ax: ``matplotlib.axes instance``
+    :param deformed: configuration to be plotted.
+    :type deformed: Bool
+    :param field: field to be plotted. Options are "tension" or "stress".
+    :type deformed: String
+    :param label: if True, node labels are plotted.
+    :type label: Bool
+    :param forces: if True, external forces are plotted.
+    :type forces: Bool
+    :param displacements: if True, displacements are plotted.
+    :type displacements: Bool
+    :param force_scale: scale of the external forces vector.
+    :type force_scale: float
+    :param displacement_scale: scale of the external displacement vector.
+    :type displacement_scale: float
+    
+    """
     for node in self.nodes: node.draw(ax, deformed = deformed, label = label)
     bars = self.bars
     length = np.array([b.length for b in bars])
@@ -165,17 +220,39 @@ class Model(object):
         upos = "tail"  
       qu = ax.quiver(P[0], P[1], U[0], U[1], scale_units='xy', angles = "xy", pivot=upos, scale=1., color = "green")
   
-  def get_mass(self):
+  def mass(self):
     return np.array([b.mass for b in self.bars]).sum()
-  mass = property(get_mass)  
+  
       
 class Node(object):
-  def __init__(self, coords = np.array([0., 0.]), label = None, block_side = 1):
+  """
+  Creates a node.
+  
+  :param coords: coordinates of the node.
+  :type coords: length 2 float array
+  :param force: external force applied on the node.
+  :type force: length 2 float array
+  :param block: bloked degrees of freedom.
+  :type block: length 2 boolean array
+  :param label: label of the node.
+  :type label: string
+  
+  >>> from truss.core import Node
+  >>> A = Node((1.,5.), label = "A", block = (False, True) )
+
+  """
+  def __init__(self, 
+      coords = np.array([0., 0.]), 
+      label = None, 
+      force = np.zeros(2),
+      block = np.array([False, False]), 
+      block_side = 1):
+  
     coords = np.array(coords).astype(np.float64)[0:2]
     self.coords = np.array(coords)
     self.displacement = np.zeros(2)
-    self.force = np.zeros(2)
-    self.block = np.array([False, False])
+    self.force = np.array(force)
+    self.block = np.array(block)
     self.label = label
     self.block_side = block_side
   
@@ -183,6 +260,9 @@ class Node(object):
     return "<Node {0}: x = {1}, y = {2}>".format(self.label, self.coords[0], self.coords[1])
   
   def draw(self, ax, deformed = True, radius = 0.03, label = True, force_factor = 5.):
+    """
+    Draws the node.
+    """
     pos = self.coords.copy()
     if deformed: pos += self.displacement
     patch = patches.Circle(pos, radius, color='k',clip_on=False)
@@ -225,7 +305,32 @@ class Node(object):
       
     
 class Bar(object):
+  """
+  A bar class.
+  
+  
+  :param n1: start node of the bar.
+  :type n1:  ``truss.core.Node`` instance.
+  :param n2: end node of the bar.
+  :type n2:  ``truss.core.Node`` instance.
+  :param section: cross section of the bar.
+  :type section:  float
+  :param modulus: Young's modulus of the bar's constitutive material.
+  :type modulus:  float
+  :param density: density of the bar's constitutive material.
+  :type density:  float
+  
+  >>> from truss.core import Node, Bar, Model
+  >>> m = Model()
+  >>> A = m.add_node((0., 1.), label = "A")
+  >>> B = m.add_node((1., 1.), label = "B")
+  >>> b = Bar(A, B, section = 1., modulus = 210.e9, density = 7800.)
+  >>> b
+  <Bar: (0.0, 1.0) -> (1.0, 1.0), S = 1.0, E = 2.1e+11, rho = 7800.0>
+
+  """
   def __init__(self, n1, n2, section = 1., modulus = 1., density = 1.):
+    
     self.conn = [n1, n2]
     self.section = float(section)
     self.modulus = float(modulus)
@@ -263,6 +368,13 @@ class Bar(object):
     ax.add_artist(p)  
    
   def length(self, deformed = False):
+    """
+    Returns the length of the bar.
+    
+    :param deformed: False for undeformed configuration, True for deformed configuration.
+    :type deformed: Bool
+    :rtype: float
+    """
     conn = self.conn
     if deformed:
       return ((conn[0].coords + conn[0].displacement 
@@ -271,26 +383,46 @@ class Bar(object):
       return ((conn[0].coords - conn[1].coords)**2).sum()**.5 
    
      
-  def get_volume(self):
+  def volume(self):
+    """
+    Returns the (undeformed) volume of the bar.
+    
+    :rtype: float
+    """
     S = self.section
     L = self.length()
     return S * L
-  volume = property(get_volume)   
   
-  def get_mass(self):
+  
+  def mass(self):
+    """
+    Returns the mass of the bar.
+    
+    :rtype: float
+    """
     V = self.volume
     rho = self.density
     return V * rho
-  mass = property(get_mass)   
   
-  def get_stiffness(self):
+  
+  def stiffness(self):
+    """
+    Returns the stiffness of the bar.
+    
+    :rtype: float
+    """
     S = self.section
     L = self.length()
     E = self.modulus
     return E * S / L    
-  stiffness = property(get_stiffness)   
+  
   
   def direction(self, deformed = False):
+    """
+    Returns the unit vector corresponding to the direction of the bar from start to end.
+    
+    :rtype: length 2 array
+    """
     conn = self.conn
     if deformed:
       return (conn[1].coords + conn[1].displacement 
@@ -300,6 +432,11 @@ class Bar(object):
   
   
   def normal(self, deformed = False):
+    """
+    Returns the unit vector corresponding to the normal direction of the bar.
+    
+    :rtype: length 2 array
+    """
     t = self.direction(deformed)
     n = np.zeros(2)
     n[0] = -t[1]
@@ -308,12 +445,29 @@ class Bar(object):
   
   
   
-  def get_stiffness_matrix(self):
+  def stiffness_matrix(self):
+    """
+    Returns stiffness matrix of the bar.
+    
+    :rtype: (4,4) array
+    
+    >>> from truss.core import Node, Bar, Model
+    >>> m = Model()
+    >>> B = m.add_node((0., 1.), label = "B")
+    >>> A = m.add_node((0., 0.), label = "A")
+    >>> b = Bar(A, B)
+    >>> b.stiffness_matrix()
+    array([[ 0.,  0.,  0.,  0.],
+           [ 0.,  1.,  0., -1.],
+           [ 0.,  0.,  0.,  0.],
+           [ 0., -1.,  0.,  1.]])
+
+    """
     u = self.direction()
-    k = self.stiffness
+    k = self.stiffness()
     ux, uy = u[0], u[1]
     a = np.array([[-ux, -uy, ux, uy]])
     K = k *  a.transpose().dot(a)
     return K
-  stiffness_matrix = property(get_stiffness_matrix)   
+  
           

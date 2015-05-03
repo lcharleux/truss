@@ -1,4 +1,4 @@
-import treillis
+import truss
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -11,7 +11,7 @@ rho = 2700.           #kg/m**3
 surface = 1.e2       #m**2
 yield_stress = 400. #Pa
 
-m = treillis.core.Model()
+m = truss.core.Model()
 A = m.add_node((0.,0.), label = "A")
 B = m.add_node((0.,1.), label = "B")
 C = m.add_node((1.,0.), label = "C")
