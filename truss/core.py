@@ -221,7 +221,7 @@ class Model(object):
       qu = ax.quiver(P[0], P[1], U[0], U[1], scale_units='xy', angles = "xy", pivot=upos, scale=1., color = "green")
   
   def mass(self):
-    return np.array([b.mass for b in self.bars]).sum()
+    return np.array([b.mass() for b in self.bars]).sum()
   
       
 class Node(object):
@@ -400,7 +400,7 @@ class Bar(object):
     
     :rtype: float
     """
-    V = self.volume
+    V = self.volume()
     rho = self.density
     return V * rho
   
