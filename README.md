@@ -1,4 +1,4 @@
-spym
+Truss 
 ====
 
-Scanning Probe Microscopy post processing with pYthon
+2D truss calculations
