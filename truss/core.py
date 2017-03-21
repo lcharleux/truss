@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
 import numpy as np
+import pandas as pd
 from matplotlib import patches, cm, pyplot
 
 class Model(object):
@@ -10,6 +9,50 @@ class Model(object):
   def __init__(self):
     self.nodes = []
     self.bars = []
+  
+  def data(self, at = "nodes"):
+    """
+    Returns the data associated with the bars/nodes a dataframe.
+    
+    Inputs:
+    
+    * at: should be 'nodes' or 'bars'
+    
+    >>> m.data(at = "nodes")
+        block        coords            disp              force       label
+        bx     by      x  y           ux           uy    Fx    Fy     o
+    0   True   True      0  0            0            0 -2000 -1000     A
+    1   True  False      0  1            0   4.7619e-05  1000     0     B
+    2  False  False      1  0  9.52381e-05  0.000277544  1000  1000     C
+    3  False  False      1  1            0  0.000277544     0     0     D
+    
+    >>> m.data(at = "bars")
+        conn    direction           geometry                props                    \
+        c1 c2        dx        dy   length       volume density      mass section   
+    0    A  B         0         1        1       0.0001    2700      0.27  0.0001   
+    1    A  C         1         0        1       0.0001    2700      0.27  0.0001   
+    2    B  C  0.707107 -0.707107  1.41421  0.000141421    2700  0.381838  0.0001   
+    3    C  D         0         1        1       0.0001    2700      0.27  0.0001   
+    4    B  D         1         0        1       0.0001    2700      0.27  0.0001   
+             state                                         
+        elongation       strain       stress      tension  
+    0   4.7619e-05   4.7619e-05        1e+07         1000  
+    1  9.52381e-05  9.52381e-05        2e+07         2000  
+    2 -9.52381e-05 -6.73435e-05 -1.41421e+07     -1414.21  
+    3 -5.42101e-20 -5.42101e-20 -1.13841e-08 -1.13841e-12  
+    4            0            0            0            0  
+    """
+    out = pd.concat([t.data() for t in getattr(self, at)], axis = 1)
+    out = out.transpose()
+    return out
+  
+  def nodes_data(self):
+    """
+    Returns the data associated with the bars a dataframe.
+    """
+    out = pd.concat([bar.data() for bar in self.bars], axis = 1)
+    out = out.transpose()
+    return out
       
   def add_node(self, node, *args, **kwargs):
     """
@@ -108,9 +151,9 @@ class Model(object):
     u[adof] = np.linalg.solve(Kr,fr)
     nodes = np.array(self.nodes)
     f = np.dot(K, u)
-    for i in xrange(len(nodes)):
+    for i in range(len(nodes)):
       node = nodes[i]
-      for j in xrange(2):
+      for j in range(2):
         node.displacement[j] = u[2*i+j]
         if node.block[j]: node.force[j] = f[2*i+j]
           
@@ -132,7 +175,7 @@ class Model(object):
     nodes = self.nodes
     nn = len(nodes)
     a = np.ones(2 * nn)
-    for i in xrange(nn):
+    for i in range(nn):
       if nodes[i].block[0]: a[2 * i    ] = 0 
       if nodes[i].block[1]: a[2 * i + 1] = 0  
     a = np.where(a == 1)[0]
@@ -197,7 +240,7 @@ class Model(object):
       colormap = pyplot.cm.ScalarMappable(cmap=cm.jet, 
         norm=pyplot.Normalize(vmin = vmin, vmax = vmax))
       colormap._A = []
-    for i in xrange(len(bars)):
+    for i in range(len(bars)):
       if field == None:
         color = None
       else:  
@@ -256,9 +299,36 @@ class Node(object):
     self.label = label
     self.block_side = block_side
   
-  def __repr__(self):
-    return "<Node {0}: x = {1}, y = {2}>".format(self.label, self.coords[0], self.coords[1])
+  def data(self):
+    """
+    Returns the data associated with the node as a pandas.Series object.
+    
+    >>> A.data()
+    block   bx    True
+            by    True
+    coords  x        0
+            y        0
+    disp    ux       0
+            uy       0
+    force   Fx   -2000
+            Fy   -1000
+    label   o        A
+    dtype: object 
+    """
+    return pd.Series({("label", "o") : self.label,
+                      ("coords", "x"): self.coords[0],
+                      ("coords", "y"): self.coords[1],
+                      ("disp", "ux"): self.displacement[0],
+                      ("disp", "uy"): self.displacement[1],
+                      ("force", "Fx"): self.force[0],
+                      ("force", "Fy"): self.force[1],
+                      ("block", "bx"): self.block[0] == 1,
+                      ("block", "by"): self.block[1] == 1,
+                         })
   
+  def __repr__(self):
+    return str(self.data())
+    
   def draw(self, ax, deformed = True, radius = 0.03, label = True, force_factor = 5.):
     """
     Draws the node.
@@ -339,14 +409,44 @@ class Bar(object):
     self.elongation = 0.
     self.strain = 0.
     self.stress = 0.
+  
+  def data(self):
+    """
+    Returns the data associated with the bar as a pandas.Series.
+    
+    >>> AB.data()
+    conn       c1                     A
+               c2                     B
+    direction  dx                     0
+               dy                     1
+    geometry   length                 1
+               volume            0.0001
+    props      density             2700
+               mass                0.27
+               section           0.0001
+    state      elongation    4.7619e-05
+               strain        4.7619e-05
+               stress             1e+07
+               tension             1000
+    dtype: object
+    """
+    return pd.Series({("conn", "c1"): self.conn[0].label,
+                      ("conn", "c2"): self.conn[1].label,
+                      ("props", "section"): self.section,
+                      ("props", "density"): self.density,
+                      ("state", "tension"): self.tension,
+                      ("state", "elongation"): self.elongation,
+                      ("state", "strain"): self.strain,
+                      ("state", "stress"): self.stress,
+                      ("geometry", "volume"): self.volume(),
+                      ("geometry", "length"): self.length(),
+                      ("props", "mass"): self.mass(),
+                      ("direction", "dx"): self.direction()[0],
+                      ("direction", "dy"):self.direction()[1],
+                      })
     
   def __repr__(self):
-    return "<Bar: ({0}, {1}) -> ({2}, {3}), S = {4}, E = {5}, rho = {6}>".format(
-      self.conn[0].coords[0], 
-      self.conn[0].coords[1],
-      self.conn[1].coords[0],
-      self.conn[1].coords[1], 
-      self.section, self.modulus, self.density)  
+    return str(self.data())
   
   def draw(self, ax, deformed = True, offset = .1, width = .05, color = None):
     b = self

@@ -26,15 +26,16 @@ sys.path.append(os.path.abspath('sphinxext'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = extensions = ['sphinx.ext.autodoc', 
-'sphinx.ext.mathjax',
-'sphinx.ext.viewcode',
-'sphinx.ext.doctest',
+#'sphinx.ext.mathjax',
+#'sphinx.ext.viewcode',
+#'sphinx.ext.doctest',
 'matplotlib.sphinxext.mathmpl',
 'matplotlib.sphinxext.only_directives',
 'matplotlib.sphinxext.plot_directive',
-'ipython_directive',
-'ipython_console_highlighting',
-'numpydoc']
+#'ipython_directive',
+#'ipython_console_highlighting',
+#'numpydoc',
+]
 
 
 # Add any paths that contain templates here, relative to this directory.
@@ -51,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Truss'
-copyright = u'2015, Ludovic Charleux'
+copyright = u'2015-2017, Ludovic Charleux'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
