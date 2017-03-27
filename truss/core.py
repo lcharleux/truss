@@ -464,7 +464,8 @@ class Bar(object):
       n0 + (l-o-w)*u - w*n, n0 + (o+w)*u - w*n, n0 + o*u, n0])
     tension = b.tension
     if color == None: color = "none"
-    p = patches.Polygon(verts, facecolor = color, linewidth = 1.5,clip_on=False)
+    p = patches.Polygon(verts, facecolor = color, linewidth = 1.5, 
+                        edgecolor = "black",clip_on=False)
     ax.add_artist(p)  
    
   def length(self, deformed = False):
