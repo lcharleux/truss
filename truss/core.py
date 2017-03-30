@@ -389,6 +389,8 @@ class Bar(object):
   :type modulus:  float
   :param density: density of the bar's constitutive material.
   :type density:  float
+  :param yield_stress: yield_stress of the bar's constitutive material.
+  :type yield_stress:  float
   
   >>> from truss.core import Node, Bar, Model
   >>> m = Model()
@@ -399,12 +401,14 @@ class Bar(object):
   <Bar: (0.0, 1.0) -> (1.0, 1.0), S = 1.0, E = 2.1e+11, rho = 7800.0>
 
   """
-  def __init__(self, n1, n2, section = 1., modulus = 1., density = 1.):
+  def __init__(self, n1, n2, section = 1., modulus = 1., density = 1., 
+                     yield_stress = .001):
     
     self.conn = [n1, n2]
     self.section = float(section)
     self.modulus = float(modulus)
     self.density = float(density)
+    self.yield_stress = float(yield_stress)
     self.tension = 0.
     self.elongation = 0.
     self.strain = 0.
@@ -438,6 +442,7 @@ class Bar(object):
                       ("state", "elongation"): self.elongation,
                       ("state", "strain"): self.strain,
                       ("state", "stress"): self.stress,
+                      ("state", "failure"): (self.yield_stress - abs(self.stress) <= 0.), 
                       ("geometry", "volume"): self.volume(),
                       ("geometry", "length"): self.length(),
                       ("props", "mass"): self.mass(),
@@ -448,7 +453,7 @@ class Bar(object):
   def __repr__(self):
     return str(self.data())
   
-  def draw(self, ax, deformed = True, offset = .1, width = .05, color = None):
+  def draw(self, ax, deformed = True, offset = .2, width = .1, color = None):
     b = self
     o = offset
     w = width
@@ -543,8 +548,6 @@ class Bar(object):
     n[0] = -t[1]
     n[1] = t[0]
     return n
-  
-  
   
   def stiffness_matrix(self):
     """
